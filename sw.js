@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xps10-mixer-v8';
+const CACHE_NAME = 'xps10-mixer-v9';
 const ASSETS = [
   './',
   './index.html',
