@@ -1,0 +1,30 @@
+{
+  "name": "XPS-10 Pro Multi-Mixer Mobile",
+  "short_name": "XPS10Mixer",
+  "description": "Misturador de áudio PWA para controle MIDI otimizado para Poco X6 Pro.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#121214",
+  "theme_color": "#ff9500",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-1024.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-1024.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

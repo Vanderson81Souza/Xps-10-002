@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>XPS-10 Pro Multi-Mixer Mobile</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121214">
+  <style>
+    /* ----------------------------------------------------
+       CONFIGURAÇÕES GERAIS E VARIÁVEIS (COR FIXA DO SISTEMA)
+       ---------------------------------------------------- */
+    :root {
+      --bg-main: #153f1d;
+      --bg-card: #ede9e9;
+      --bg-input: #26262b;
+      --primary: #0c5952; /* Cor fixa do sistema */
+      --danger: #ff3b30;
+      --accent: #34c759;
+      --text: #ffffff;
+      --text-muted: #a1a1aa;
+      --border: #2e2e33;
+    }
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      -webkit-tap-highlight-color: transparent; 
+    }
+    
+    html, body {
+      height: 100vh;
+      background-color: var(--bg-main);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      position: relative;
+      user-select: none;
+    }
+
+    /* ----------------------------------------------------
+       BARRA SUPERIOR FIXA (NAVBAR)
+       ---------------------------------------------------- */
+    .top-navbar {
+      height: 50px;
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 110;
+      position: relative;
+    }
+
+    .top-navbar h1 { 
+      font-size: 0.95rem; 
+      font-weight: 600; 
+      color: var(--text); 
+    }
+
+    .midi-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      background: var(--bg-input);
+      padding: 4px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+    .midi-led { 
+      width: 8px; 
+      height: 8px; 
+      border-radius: 50%; 
+      background-color: #555; 
+      transition: background-color 0.05s ease;
+    }
+    .midi-led.connected { 
+      background-color: var(--accent); 
+      box-shadow: 0 0 8px var(--accent); 
+    }
+    .midi-led.blink { 
+      background-color: #fff; 
+      box-shadow: 0 0 10px #fff; 
+    }
+
+    .btn-toggle-sidebar {
+      background: var(--primary);
+      border: none;
+      color: #000;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    /* ----------------------------------------------------
+       SIDEBAR SUPERIOR SLIDER (DE CIMA PARA BAIXO)
+       ---------------------------------------------------- */
+    .sidebar-top {
+      position: absolute;
+      top: -320px;
+      left: 0;
+      width: 100%;
+      background: var(--bg-card);
+      border-bottom: 2px solid var(--primary);
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      z-index: 100;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+    }
+    .sidebar-top.open { 
+      transform: translateY(370px); 
+    }
+
+    .crud-group { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px; 
+    }
+    .crud-group label {
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+    .crud-group select, .crud-group input {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      outline: none;
+    }
+    .btn-action {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .btn-action.btn-save { 
+      background: var(--primary); 
+      color: #000; 
+      border-color: var(--primary);
+    }
+
+    /* ----------------------------------------------------
+       LAYOUT PRINCIPAL DO CONSOLE DE SOM
+       ---------------------------------------------------- */
+    .console-container {
+      display: flex;
+      height: calc(100vh - 50px);
+      padding: 6px;
+      gap: 6px;
+    }
+
+    /* SEÇÃO MASTER */
+    .master-strip {
+      width: 65px;
+      background: var(--bg-card);
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 2px;
+    }
+    .master-title { 
+      font-size: 0.65rem; 
+      font-weight: 900; 
+      color: var(--primary); 
+      text-transform: uppercase; 
+      letter-spacing: 0.5px;
+    }
+
+    /* CONTAINER REDUZIDO PARA 6 CANAIS */
+    .mixer-scroll-area {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      overflow-x: hidden;
+      overflow-y: hidden;
+    }
+
+    /* RENDERIZAÇÃO E ESTRUTURA DO CANAL */
+    .channel-strip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 1px;
+      position: relative;
+    }
+    .channel-strip.muted { 
+      opacity: 0.4; 
+      border-color: var(--danger); 
+    }
+    
+    .ch-name-input {
+      width: 90%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.65rem;
+      font-weight: bold;
+      text-align: center;
+      padding: 4px 0;
+      border-radius: 4px;
+      text-transform: uppercase;
+      outline: none;
+    }
+    /* PAN SLIDER */
+    .pan-box { 
+      width: 90%; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+    }
+    .pan-lbl { 
+      font-size: 0.55rem; 
+      font-weight: bold;
+      color: var(--text-muted); 
+    }
+    .pan-slider { 
+      width: 100%; 
+      height: 12px; 
+      -webkit-appearance: none; 
+      background: var(--bg-input); 
+      border-radius: 4px; 
+      outline: none;
+    }
+    .pan-slider::-webkit-slider-thumb { 
+      -webkit-appearance: none; 
+      width: 12px; 
+      height: 12px; 
+      background: var(--primary); 
+      border-radius: 2px; 
+    }
+
+    /* FADER AREA VERTICALIZADA VIRTUAL */
+    .fader-area {
+      flex: 1;
+      display: flex;
+      width: 100%;
+      position: relative;
+      align-items: center;
+      justify-content: center;
+      height: 180px;
+    }
+    .vu-meter {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5px;
+      width: 4px;
+      height: 100%;
+      background: #050505;
+      position: absolute;
+      left: 5px;
+      justify-content: flex-end;
+      border-radius: 1px;
+    }
+    .vu-seg { flex: 1; background: #222; border-radius: 0.5px; }
+    .vu-seg.green.active { background: var(--accent); box-shadow: 0 0 2px var(--accent); }
+    .vu-seg.yellow.active { background: #f1c40f; box-shadow: 0 0 2px #f1c40f; }
+    .vu-seg.red.active { background: var(--danger); box-shadow: 0 0 2px var(--danger); }
+
+    .fader-wrapper { 
+      width: 30px; 
+      height: 100%; 
+      position: relative; 
+      display: flex; 
+      justify-content: center; 
+    }
+    .range-fader {
+      -webkit-appearance: none;
+      width: 170px; 
+      height: 6px;
+      background: var(--bg-input);
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+      outline: none;
+      border-radius: 4px;
+      border: 1px solid #111;
+    }
+    .range-fader::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px; 
+      height: 34px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, #ffffff, #cccccc);
+      border: 1px solid #444;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+
+    .val-display { 
+      font-size: 0.75rem; 
+      font-family: monospace; 
+      font-weight: bold; 
+      background: #000; 
+      padding: 1px 4px; 
+      border-radius: 3px; 
+      min-width: 25px; 
+      text-align: center; 
+    }
+
+    /* BOTÕES DOS CANAIS */
+    .btn-group { 
+      display: flex; 
+      flex-direction: column; 
+      width: 90%; 
+      gap: 3px; 
+    }
+    .btn-ctrl { 
+      background: var(--bg-input); 
+      border: 1px solid var(--border); 
+      color: var(--text); 
+      font-size: 0.65rem; 
+      font-weight: bold; 
+      padding: 6px 0; 
+      border-radius: 4px; 
+      cursor: pointer;
+    }
+    .btn-ctrl.active-mute { 
+      background: var(--danger); 
+      color: #fff; 
+      border-color: #600000;
+    }
+
+    /* MODAL DE EFEITOS (FX SLIDERS) */
+    .modal-overlay {
+      position: fixed; top:0; left:0; width:100vw; height:100vh;
+      background: rgba(0,0,0,0.75); display: flex; justify-content: center; align-items: center;
+      z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; width: 92%; max-width: 450px; padding: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .modal-title { font-size: 0.85rem; font-weight: bold; color: var(--primary); text-transform: uppercase; }
+    .modal-close { background: var(--bg-input); color: var(--text); border: 1px solid var(--border); padding: 5px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
+    
+    .fx-row { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .fx-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); padding: 10px; border-radius: 6px; border: 1px solid var(--border); }
+    .fx-item span { font-size: 0.7rem; font-weight: bold; min-width: 90px; text-transform: uppercase; }
+    .fx-item input { flex: 1; margin: 0 12px; height: 6px; -webkit-appearance: none; background: #555; border-radius: 3px; outline: none; }
+    .fx-item input::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: var(--primary); border-radius: 50%; cursor: pointer; }
+    /* AJUSTE DINÂMICO PARA MODO PAISAGEM / LANDSCAPE (CELULAR DEITADO) */
+    @media (orientation: landscape) {
+      .fader-area {
+        height: 100px; /* Reduz ligeiramente a área física para compensar a perda de altura da tela */
+      }
+      .range-fader {
+        width: 100px; /* Reajusta o curso do fader para caber perfeitamente na horizontal */
+      }
+      .sidebar-top {
+        grid-template-columns: repeat(4, 1fr); /* Distribui o menu em 4 colunas para não ocupar muita tela vertical */
+        top: -180px;
+      }
+      .sidebar-top.open { 
+        transform: translateY(230px); 
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+  <nav class="top-navbar">
+    <h1>XPS-10 Pro Mobile</h1>
+    <div class="midi-indicator">
+      <div class="midi-led" id="midi-led"></div>
+      <span id="midi-txt">Midi Offline</span>
+    </div>
+    <button class="btn-toggle-sidebar" id="btn-menu">MENU</button>
+  </nav>
+
+  <div class="sidebar-top" id="sidebar">
+    <div class="crud-group">
+      <label>CENA LOCAL</label>
+      <select id="select-scene"><option value="">-- Cadastros --</option></select>
+      <button class="btn-action" id="btn-load">ABRIR CENA</button>
+      <button class="btn-action" id="btn-delete" style="color:var(--danger)">EXCLUIR</button>
+    </div>
+    <div class="crud-group">
+      <label>SALVAR ATUAL</label>
+      <input type="text" id="input-scene-name" placeholder="Nome da cena..." maxlength="15">
+      <button class="btn-action btn-save" id="btn-save">GRAVAR</button>
+      <button class="btn-action" id="btn-export">BACKUP JSON</button>
+    </div>
+  </div>
+
+  <div class="console-container">
+    <aside class="master-strip">
+      <div class="master-title">Master</div>
+      <div class="fader-area">
+        <div class="fader-wrapper">
+          <input type="range" class="range-fader" id="master-fader" min="0" max="127" value="127">
+        </div>
+      </div>
+      <div class="val-display" id="master-val">127</div>
+      <div style="height: 10px;"></div>
+    </aside>
+
+    <main class="mixer-scroll-area" id="mixer-container"></main>
+  </div>
+
+  <div class="modal-overlay" id="fx-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="fx-modal-title">Efeitos Canal 1</div>
+        <button class="modal-close" id="fx-modal-close">FECHAR</button>
+      </div>
+      <div class="fx-row" id="fx-sliders-target"></div>
+    </div>
+  </div>
+
+  <script>
+    const PREFIX = "xps10_mob_";
+    let isDirty = false;
+    let activeChannelForFx = 0;
+    let midiOutput = null;
+
+    // Definição de CCs nativos do Roland XPS-10 (Sem Equalização de 3 bandas)
+    const FX_CONFIGS = [
+      { name: "Reverb Send", cc: 91, key: "reverb" },
+      { name: "Filter Cutoff", cc: 74, key: "cutoff" },
+      { name: "Resonance", cc: 71, key: "resonance" },
+      { name: "Attack Time", cc: 73, key: "attack" },
+      { name: "Release Time", cc: 72, key: "release" }
+    ];
+
+    // Mapeamento dos Elementos do DOM
+    const ledEl = document.getElementById('midi-led');
+    const txtEl = document.getElementById('midi-txt');
+    const sidebar = document.getElementById('sidebar');
+    const btnMenu = document.getElementById('btn-menu');
+    const btnSave = document.getElementById('btn-save');
+    const btnLoad = document.getElementById('btn-load');
+    const btnDelete = document.getElementById('btn-delete');
+    const btnExport = document.getElementById('btn-export');
+    const selectScene = document.getElementById('select-scene');
+    const inputSceneName = document.getElementById('input-scene-name');
+    const masterFader = document.getElementById('master-fader');
+    const masterVal = document.getElementById('master-val');
+    const fxModal = document.getElementById('fx-modal');
+    const fxModalTitle = document.getElementById('fx-modal-title');
+    const fxSlidersTarget = document.getElementById('fx-sliders-target');
+    const fxModalClose = document.getElementById('fx-modal-close');
+    const mixerContainer = document.getElementById('mixer-container');
+
+    /* ========================================================
+       ENGINE DE COMUNICAÇÃO MIDI
+       ======================================================== */
+    const MidiEngine = {
+      init() {
+        if (navigator.requestMIDIAccess) {
+          navigator.requestMIDIAccess().then(access => {
+            this.scanDevices(access);
+            access.onstatechange = () => this.scanDevices(access);
+          }).catch(() => { txtEl.innerText = "Sem Suporte MIDI"; });
+        }
+      },
+      scanDevices(access) {
+        let found = false;
+        for (let output of access.outputs.values()) {
+          if (output.name.toLowerCase().includes("xps-10") || output.name.toLowerCase().includes("roland")) {
+            midiOutput = output;
+            found = true;
+            break;
+          }
+        }
+        if (found) {
+          ledEl.className = "midi-led connected";
+          txtEl.innerText = "XPS-10 Online";
+        } else {
+          midiOutput = null;
+          ledEl.className = "midi-led";
+          txtEl.innerText = "Midi Offline";
+        }
+      },
+      sendCC(channel, cc, value) {
+        if (midiOutput) {
+          midiOutput.send([0xB0 + channel, cc, value]);
+          this.blink();
+        }
+      },
+      blink() {
+        ledEl.classList.add('blink');
+        setTimeout(() => ledEl.classList.remove('blink'), 40);
+      }
+    };
+
+    /* ========================================================
+       ENGINE DE PERSISTÊNCIA LOCAL
+       ======================================================== */
+    const StorageEngine = {
+      saveScene(name, state) {
+        localStorage.setItem(`${PREFIX}${name}`, JSON.stringify(state));
+      },
+      loadScene(name) {
+        const data = localStorage.getItem(`${PREFIX}${name}`);
+        return data ? JSON.parse(data) : null;
+      },
+      deleteScene(name) {
+        localStorage.removeItem(`${PREFIX}${name}`);
+      },
+      getAllScenes() {
+        return Object.keys(localStorage)
+          .filter(key => key.startsWith(PREFIX))
+          .map(key => key.replace(PREFIX, ""));
+      },
+      exportBackup() {
+        const backup = {};
+        Object.keys(localStorage).forEach(key => {
+          if(key.startsWith(PREFIX)) backup[key] = JSON.parse(localStorage.getItem(key));
+        });
+        return JSON.stringify(backup, null, 2);
+      }
+    };
+    /* ========================================================
+       GERENCIADOR DA MESA MIXER E CORRELAÇÃO DE ESTADOS
+       ======================================================== */
+    class MixerConsole {
+      constructor() {
+        this.channelsCount = 6;
+        this.state = Array.from({ length: this.channelsCount }, (_, i) => ({
+          id: i, label: `CH 0${i+1}`, volume: 100, pan: 64, isMuted: false,
+          reverb: 40, cutoff: 64, resonance: 64, attack: 64, release: 64
+        }));
+      }
+
+      render() {
+        mixerContainer.innerHTML = "";
+        this.state.forEach(ch => {
+          const strip = document.createElement('div');
+          strip.className = `channel-strip ${ch.isMuted ? 'muted' : ''}`;
+          strip.id = `strip-${ch.id}`;
+
+          strip.innerHTML = `
+            <input type="text" class="ch-name-input" id="name-${ch.id}" value="${ch.label}">
+            <div class="pan-box">
+              <span class="pan-lbl" id="pdisp-${ch.id}">${this.calcularPanTexto(ch.pan)}</span>
+              <input type="range" class="pan-slider" id="pan-${ch.id}" min="0" max="127" value="${ch.pan}">
+            </div>
+            <div class="fader-area">
+              <div class="vu-meter" id="vu-${ch.id}">
+                ${Array.from({length:15}, (_,v) => `<div class="vu-seg \${v<2?'red':v<5?'yellow':'green'}"></div>`).join("")}
+              </div>
+              <div class="fader-wrapper">
+                <input type="range" class="range-fader" id="fad-${ch.id}" min="0" max="127" value="${ch.volume}">
+              </div>
+            </div>
+            <div class="val-display" id="vdisp-${ch.id}">${ch.volume}</div>
+            <div class="btn-group">
+              <button class="btn-ctrl" id="btn-fx-${ch.id}">FX</button>
+              <button class="btn-ctrl ${ch.isMuted ? 'active-mute' : ''}" id="btn-mute-${ch.id}">MUTE</button>
+            </div>
+          `;
+          mixerContainer.appendChild(strip);
+          this.bindEvents(ch.id);
+          this.updateVuMeter(ch.id, ch.volume);
+        });
+      }
+
+      calcularPanTexto(pVal) {
+        if (pVal === 64) return "C";
+        return pVal < 64 ? "L" + Math.round(((64 - pVal) / 64) * 100) : "R" + Math.round(((pVal - 64) / 64) * 100);
+      }
+
+      bindEvents(id) {
+        const fader = document.getElementById(`fad-${id}`);
+        const pan = document.getElementById(`pan-${id}`);
+        const nameInput = document.getElementById(`name-${id}`);
+        const muteBtn = document.getElementById(`btn-mute-${id}`);
+        const fxBtn = document.getElementById(`btn-fx-${id}`);
+
+        fader.addEventListener('input', (e) => {
+          const vol = parseInt(e.target.value);
+          this.state[id].volume = vol;
+          document.getElementById(`vdisp-${id}`).innerText = vol;
+          this.updateVuMeter(id, vol);
+          if(!this.state[id].isMuted) MidiEngine.sendCC(id, 7, vol);
+          isDirty = true;
+        });
+
+        pan.addEventListener('input', (e) => {
+          const pVal = parseInt(e.target.value);
+          this.state[id].pan = pVal;
+          document.getElementById(`pdisp-${id}`).innerText = this.calcularPanTexto(pVal);
+          MidiEngine.sendCC(id, 10, pVal);
+          isDirty = true;
+        });
+
+        nameInput.addEventListener('change', (e) => {
+          this.state[id].label = e.target.value;
+          isDirty = true;
+        });
+
+        muteBtn.addEventListener('click', () => {
+          const ch = this.state[id];
+          ch.isMuted = !ch.isMuted;
+          document.getElementById(`strip-${id}`).classList.toggle('muted', ch.isMuted);
+          muteBtn.classList.toggle('active-mute', ch.isMuted);
+          MidiEngine.sendCC(id, 7, ch.isMuted ? 0 : ch.volume);
+          isDirty = true;
+        });
+
+        fxBtn.addEventListener('click', () => abrirModalFx(id));
+      }
+
+      updateVuMeter(id, volume) {
+        const segments = document.querySelectorAll(`#vu-${id} .vu-seg`);
+        const activeCount = Math.ceil((volume / 127) * 15);
+        segments.forEach((seg, idx) => {
+          const inverted = 14 - idx;
+          if (inverted < activeCount) seg.classList.add('active');
+          else seg.classList.remove('active');
+        });
+      }
+    }
+
+    const consoleEngine = new MixerConsole();
+
+    /* ========================================================
+       SISTEMA DE MODAIS E INTERAÇÕES ADICIONAIS
+       ======================================================== */
+    function abrirModalFx(chId) {
+      activeChannelForFx = chId;
+      const canalDados = consoleEngine.state[chId];
+      fxModalTitle.innerText = `Efeitos e Filtros - ${canalDados.label}`;
+      
+      fxSlidersTarget.innerHTML = FX_CONFIGS.map(fx => `
+        <div class="fx-item">
+          <span>${fx.name}</span>
+          <input type="range" min="0" max="127" id="mdl-${fx.key}" value="${canalDados[fx.key]}">
+          <strong id="vmdl-${fx.key}" style="font-family:monospace; min-width:25px; text-align:right;">${canalDados[fx.key]}</strong>
+        </div>
+      `).join("");
+
+      FX_CONFIGS.forEach(fx => {
+        const slider = document.getElementById(`mdl-${fx.key}`);
+        slider.addEventListener('input', (e) => {
+          const val = parseInt(e.target.value);
+          document.getElementById(`vmdl-${fx.key}`).innerText = val;
+          consoleEngine.state[activeChannelForFx][fx.key] = val;
+          MidiEngine.sendCC(activeChannelForFx, fx.cc, val);
+          isDirty = true;
+        });
+      });
+      fxModal.classList.add('open');
+    }
+
+    function atualizarListaCenasUI() {
+      selectScene.innerHTML = '<option value="">-- Cadastros --</option>';
+      const cenas = StorageEngine.getAllScenes();
+      cenas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.innerText = c;
+        selectScene.appendChild(opt);
+      });
+    }
+
+    /* ========================================================
+       INICIALIZAÇÃO DO APP E EVENTOS DE MENUS
+       ======================================================== */
+    function initApp() {
+      MidiEngine.init();
+      consoleEngine.render();
+      atualizarListaCenasUI();
+
+      // Trigger deslizante da Sidebar Superior
+      btnMenu.addEventListener('click', () => sidebar.classList.toggle('open'));
+
+      // Gravação das Configurações
+      btnSave.addEventListener('click', () => {
+        const nome = inputSceneName.value.trim();
+        if(!nome) return alert("Insira um nome válido para a cena.");
+        StorageEngine.saveScene(nome, consoleEngine.state);
+        inputSceneName.value = "";
+        isDirty = false;
+        atualizarListaCenasUI();
+        sidebar.classList.remove('open');
+      });
+
+      // Abertura das Configurações
+      btnLoad.addEventListener('click', () => {
+        const selecionada = selectScene.value;
+        if(!selecionada) return alert("Selecione uma cena.");
+        const dados = StorageEngine.loadScene(selecionada);
+        if(dados) {
+          consoleEngine.state = dados;
+          consoleEngine.render();
+          isDirty = false;
+          sidebar.classList.remove('open');
+        }
+      });
+
+      // Exclusão das Configurações
+      btnDelete.addEventListener('click', () => {
+        const selecionada = selectScene.value;
+        if(!selecionada || !confirm(`Deseja deletar a cena: ${selecionada}?`)) return;
+        StorageEngine.deleteScene(selecionada);
+        atualizarListaCenasUI();
+      });
+
+      // Exportação JSON
+      btnExport.addEventListener('click', () => {
+        const backupJson = StorageEngine.exportBackup();
+        const blob = new Blob([backupJson], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `XPS10_Mobile_Backup.json`;
+        link.click();
+      });
+
+      // Controle de Expressão Geral (Fader Master)
+      masterFader.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        masterVal.innerText = val;
+        for(let i = 0; i < 6; i++) {
+          MidiEngine.sendCC(i, 11, val);
+        }
+      });
+
+      fxModalClose.addEventListener('click', () => fxModal.classList.remove('open'));
+    }
+
+    // Registro automático offline do Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.error('Erro SW:', err));
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
