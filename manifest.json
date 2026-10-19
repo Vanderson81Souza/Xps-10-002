@@ -3,7 +3,7 @@
   "short_name": "XPS10Mixer",
   "description": "Misturador de áudio PWA para controle MIDI otimizado para Poco X6 Pro.",
   "start_url": "./index.html",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#121214",
   "theme_color": "#ff9500",
   "orientation": "any",
